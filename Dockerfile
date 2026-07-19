@@ -1,16 +1,8 @@
-FROM golang:1.26-alpine AS builder
-
-WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 go build -o fileflow .
-
 FROM alpine:3.20
 
 RUN apk add --no-cache ca-certificates tzdata
 
-COPY --from=builder /app/fileflow /usr/local/bin/fileflow
+COPY fileflow /usr/local/bin/fileflow
 
 EXPOSE 8080
 
