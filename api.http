@@ -1,0 +1,60 @@
+### Webhook 回调 - 文件移动通知
+# 下载工具完成下载并移动到 HDD 后触发
+
+POST http://localhost:8080/api/webhook
+Content-Type: application/json
+
+{
+  "file_name": "example.mp4",
+  "event": "file_moved"
+}
+
+
+### 规则管理 - 创建规则
+
+POST http://localhost:8080/api/rules
+Content-Type: application/json
+
+{
+  "name": "电影 - 所有 mp4 文件",
+  "pattern": "*.mp4",
+  "target_dir": "/data/media/movies",
+  "rename_template": "{title}.{ext}",
+  "priority": 10,
+  "enabled": true
+}
+
+### 规则管理 - 获取所有规则
+
+GET http://localhost:8080/api/rules
+
+### 规则管理 - 获取单条规则
+
+GET http://localhost:8080/api/rules/1
+
+### 规则管理 - 更新规则
+
+PUT http://localhost:8080/api/rules/1
+Content-Type: application/json
+
+{
+  "name": "电影 - 所有视频文件",
+  "pattern": "*.{mp4,mkv,avi}",
+  "target_dir": "/data/media/movies",
+  "rename_template": "{title}.{ext}",
+  "priority": 10,
+  "enabled": true
+}
+
+### 规则管理 - 删除规则
+
+DELETE http://localhost:8080/api/rules/1
+
+### 规则管理 - 切换规则启用状态
+
+PATCH http://localhost:8080/api/rules/1/toggle
+Content-Type: application/json
+
+{
+  "enabled": false
+}
