@@ -12,3 +12,6 @@ fileflow
 # OS
 .DS_Store
 Thumbs.db
+
+# priveate code agent file
+CLAUDE.md
