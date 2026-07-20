@@ -6,7 +6,8 @@ import (
 )
 
 type Config struct {
-	Port int
+	Port   int
+	DBPath string
 }
 
 func Load() *Config {
@@ -16,5 +17,9 @@ func Load() *Config {
 			port = v
 		}
 	}
-	return &Config{Port: port}
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "fileflow.db"
+	}
+	return &Config{Port: port, DBPath: dbPath}
 }

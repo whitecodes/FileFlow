@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"FileFlow/config"
+	"FileFlow/db"
 	"FileFlow/handler"
 
 	"github.com/labstack/echo/v4"
@@ -12,13 +13,17 @@ import (
 func main() {
 	cfg := config.Load()
 
+	db.Init(cfg.DBPath)
+	defer db.Close()
+
 	e := echo.New()
 
 	e.POST("/api/webhook", handler.Webhook)
 
-	e.GET("/api/rules", func(c echo.Context) error {
-		return c.JSON(200, []interface{}{})
-	})
+	e.GET("/api/rules", handler.ListRules)
+	e.POST("/api/rules", handler.CreateRule)
+	e.GET("/api/rules/:id", handler.GetRule)
+	e.DELETE("/api/rules/:id", handler.DeleteRule)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", cfg.Port)))
 }
