@@ -60,3 +60,24 @@ func DeleteRule(id int64) error {
 	_, err := db.DB.Exec(`DELETE FROM rules WHERE id = ?`, id)
 	return err
 }
+
+func UpdateRule(id int64, r *model.Rule) error {
+	res, err := db.DB.Exec(
+		`UPDATE rules
+		 SET name = ?, pattern = ?, target_dir = ?, rename_template = ?, priority = ?, enabled = ?,
+		     updated_at = CURRENT_TIMESTAMP
+		 WHERE id = ?`,
+		r.Name, r.Pattern, r.TargetDir, r.RenameTemplate, r.Priority, r.Enabled, id,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}

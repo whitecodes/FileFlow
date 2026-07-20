@@ -23,6 +23,7 @@ func main() {
 	e.GET("/api/rules", handler.ListRules)
 	e.POST("/api/rules", handler.CreateRule)
 	e.GET("/api/rules/:id", handler.GetRule)
+	e.PUT("/api/rules/:id", handler.UpdateRule)
 	e.DELETE("/api/rules/:id", handler.DeleteRule)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", cfg.Port)))

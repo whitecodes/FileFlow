@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
 	"strconv"
@@ -12,6 +13,15 @@ import (
 )
 
 type createRuleRequest struct {
+	Name           string `json:"name"`
+	Pattern        string `json:"pattern"`
+	TargetDir      string `json:"target_dir"`
+	RenameTemplate string `json:"rename_template"`
+	Priority       int    `json:"priority"`
+	Enabled        bool   `json:"enabled"`
+}
+
+type updateRuleRequest struct {
 	Name           string `json:"name"`
 	Pattern        string `json:"pattern"`
 	TargetDir      string `json:"target_dir"`
@@ -82,6 +92,48 @@ func GetRule(c echo.Context) error {
 		return c.JSON(http.StatusNotFound, map[string]string{"error": "rule not found"})
 	}
 	return c.JSON(http.StatusOK, rule)
+}
+
+func UpdateRule(c echo.Context) error {
+	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid id"})
+	}
+
+	var req updateRuleRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+	}
+	if req.Name == "" || req.Pattern == "" || req.TargetDir == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "name, pattern and target_dir are required"})
+	}
+	if req.RenameTemplate == "" {
+		req.RenameTemplate = "{title}.{ext}"
+	}
+
+	err = service.UpdateRule(id, &model.Rule{
+		Name:           req.Name,
+		Pattern:        req.Pattern,
+		TargetDir:      req.TargetDir,
+		RenameTemplate: req.RenameTemplate,
+		Priority:       req.Priority,
+		Enabled:        req.Enabled,
+	})
+	if err == sql.ErrNoRows {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "rule not found"})
+	}
+	if err != nil {
+		log.Printf("[rule] update error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "failed to update rule"})
+	}
+
+	updated, err := service.GetRule(id)
+	if err != nil {
+		log.Printf("[rule] get after update error: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "rule updated but failed to fetch"})
+	}
+
+	return c.JSON(http.StatusOK, updated)
 }
 
 func DeleteRule(c echo.Context) error {
