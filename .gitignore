@@ -3,6 +3,8 @@ fileflow
 *.exe
 *.test
 *.out
+out/
+test-out/
 
 # IDE
 .idea/
