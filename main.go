@@ -18,7 +18,7 @@ func main() {
 
 	e := echo.New()
 
-	e.POST("/api/webhook", handler.Webhook)
+	e.POST("/api/webhook", handler.Webhook(cfg))
 
 	e.GET("/api/rules", handler.ListRules)
 	e.POST("/api/rules", handler.CreateRule)

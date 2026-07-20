@@ -3,11 +3,13 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 type Config struct {
-	Port   int
-	DBPath string
+	Port       int
+	DBPath     string
+	SearchDirs []string
 }
 
 func Load() *Config {
@@ -21,5 +23,9 @@ func Load() *Config {
 	if dbPath == "" {
 		dbPath = "fileflow.db"
 	}
-	return &Config{Port: port, DBPath: dbPath}
+	searchDirs := []string{"."}
+	if d := os.Getenv("SEARCH_DIRS"); d != "" {
+		searchDirs = strings.Split(d, ",")
+	}
+	return &Config{Port: port, DBPath: dbPath, SearchDirs: searchDirs}
 }
