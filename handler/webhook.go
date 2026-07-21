@@ -3,6 +3,7 @@ package handler
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"FileFlow/config"
 	"FileFlow/service"
@@ -26,14 +27,12 @@ func Webhook(cfg *config.Config) echo.HandlerFunc {
 		}
 
 		log.Printf("[webhook] event=%s file=%s", req.Event, req.FileName)
-		_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "received", "")
 
-		// Try each search directory
+		var lastErr error
 		for _, dir := range cfg.SearchDirs {
 			result, err := service.ProcessFile(dir, req.FileName)
 			if err != nil {
-				log.Printf("[webhook] process error in %s: %v", dir, err)
-				_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "error", err.Error())
+				lastErr = err
 				continue
 			}
 			if result != nil {
@@ -46,6 +45,17 @@ func Webhook(cfg *config.Config) echo.HandlerFunc {
 					"rule_name": result.Rule.Name,
 				})
 			}
+		}
+
+		// Determine the real outcome
+		if lastErr != nil {
+			msg := lastErr.Error()
+			if strings.Contains(msg, "file not found") {
+				_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "not_found", "")
+				return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
+			}
+			_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "error", msg)
+			return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 		}
 
 		_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "no_match", "")

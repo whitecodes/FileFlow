@@ -32,3 +32,22 @@ func TestFindFile_returnsErrorWhenNotFound(t *testing.T) {
 		t.Fatal("expected error for missing file")
 	}
 }
+
+func TestFindFile_findsMediaInNamedDir(t *testing.T) {
+	dir := t.TempDir()
+	subDir := filepath.Join(dir, "Some.Movie.2024.1080p.x265-GROUP")
+	if err := os.MkdirAll(subDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Create a smaller file and a larger one — should pick the largest
+	os.WriteFile(filepath.Join(subDir, "Some.Movie.2024.1080p.x265-GROUP.nfo"), []byte("info"), 0644)
+	os.WriteFile(filepath.Join(subDir, "Some.Movie.2024.1080p.x265-GROUP.mkv"), []byte("larger content here"), 0644)
+
+	got, err := service.FindFile(dir, "Some.Movie.2024.1080p.x265-GROUP")
+	if err != nil {
+		t.Fatalf("FindFile err: %v", err)
+	}
+	if filepath.Base(got) != "Some.Movie.2024.1080p.x265-GROUP.mkv" {
+		t.Errorf("expected the .mkv file, got %q", got)
+	}
+}
