@@ -3,19 +3,64 @@ package service
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 
 	"FileFlow/model"
 )
 
-// ProcessFile 执行完整流程：在 searchDir 中定位文件 → 匹配规则 → 移动到目标目录。
-// 如果没有匹配的规则，返回 (nil, nil)。
-// 如果文件不存在或移动失败，返回错误。
-func ProcessFile(searchDir, fileName string) (*ProcessResult, error) {
-	filePath, err := FindFile(searchDir, fileName)
+// ProcessResult 单次处理结果。
+type ProcessResult struct {
+	Rule    *model.Rule
+	SrcPath string
+	DstPath string
+}
+
+// ProcessFile 查找文件并匹配规则：
+// - 传的是文件 → 匹配规则 → 移动
+// - 传的是目录 → 递归查找所有媒体文件 → 逐个匹配规则 → 逐个移动
+// 返回处理结果列表。无匹配时不返回错误，result 列表为空。
+func ProcessFile(searchDir, fileName string) ([]*ProcessResult, error) {
+	path, isDir, err := Locate(searchDir, fileName)
 	if err != nil {
-		return nil, fmt.Errorf("find file: %w", err)
+		return nil, fmt.Errorf("locate: %w", err)
 	}
 
+	if !isDir {
+		// 单个文件
+		result, err := processSingleFile(path)
+		if err != nil {
+			return nil, err
+		}
+		if result == nil {
+			return nil, nil
+		}
+		return []*ProcessResult{result}, nil
+	}
+
+	// 目录：列出所有文件逐个处理
+	files, err := ListFiles(path)
+	if err != nil {
+		log.Printf("[process] no media files in directory %s: %v", path, err)
+		return nil, nil
+	}
+
+	var results []*ProcessResult
+	for _, f := range files {
+		result, err := processSingleFile(f)
+		if err != nil {
+			log.Printf("[process] skip %s: %v", f, err)
+			continue
+		}
+		if result != nil {
+			results = append(results, result)
+		}
+	}
+	return results, nil
+}
+
+// processSingleFile 处理单个文件：匹配规则，移动到目标目录。
+func processSingleFile(filePath string) (*ProcessResult, error) {
+	fileName := filepath.Base(filePath)
 	rule, err := MatchRule(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("match rule: %w", err)
@@ -25,7 +70,7 @@ func ProcessFile(searchDir, fileName string) (*ProcessResult, error) {
 		return nil, nil
 	}
 
-	log.Printf("[process] matched rule=%q, moving %s -> %s", rule.Name, filePath, rule.TargetDir)
+	log.Printf("[process] matched rule=%q for %s, moving -> %s", rule.Name, fileName, rule.TargetDir)
 
 	dst, err := MoveFile(filePath, rule.TargetDir, rule.RenameTemplate)
 	if err != nil {
@@ -37,10 +82,4 @@ func ProcessFile(searchDir, fileName string) (*ProcessResult, error) {
 		SrcPath: filePath,
 		DstPath: dst,
 	}, nil
-}
-
-type ProcessResult struct {
-	Rule    *model.Rule
-	SrcPath string
-	DstPath string
 }

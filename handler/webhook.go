@@ -30,27 +30,25 @@ func Webhook(cfg *config.Config) echo.HandlerFunc {
 
 		var lastErr error
 		for _, dir := range cfg.SearchDirs {
-			result, err := service.ProcessFile(dir, req.FileName)
+			results, err := service.ProcessFile(dir, req.FileName)
 			if err != nil {
 				lastErr = err
 				continue
 			}
-			if result != nil {
-				log.Printf("[webhook] processed: %s -> %s (rule=%q)", result.SrcPath, result.DstPath, result.Rule.Name)
-				_ = service.RecordHistory(req.FileName, req.Event, result.Rule.Name, result.SrcPath, result.DstPath, "matched", "")
+			if len(results) > 0 {
+				for _, r := range results {
+					log.Printf("[webhook] processed: %s -> %s (rule=%q)", r.SrcPath, r.DstPath, r.Rule.Name)
+					_ = service.RecordHistory(req.FileName, req.Event, r.Rule.Name, r.SrcPath, r.DstPath, "matched", "")
+				}
 				return c.JSON(http.StatusOK, map[string]string{
-					"status":    "ok",
-					"src_path":  result.SrcPath,
-					"dst_path":  result.DstPath,
-					"rule_name": result.Rule.Name,
+					"status": "ok",
 				})
 			}
 		}
 
-		// Determine the real outcome
 		if lastErr != nil {
 			msg := lastErr.Error()
-			if strings.Contains(msg, "file not found") {
+			if strings.Contains(msg, "not found") {
 				_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "not_found", "")
 				return c.JSON(http.StatusOK, map[string]string{"status": "ok"})
 			}
