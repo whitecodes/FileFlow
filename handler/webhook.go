@@ -26,16 +26,19 @@ func Webhook(cfg *config.Config) echo.HandlerFunc {
 		}
 
 		log.Printf("[webhook] event=%s file=%s", req.Event, req.FileName)
+		_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "received", "")
 
 		// Try each search directory
 		for _, dir := range cfg.SearchDirs {
 			result, err := service.ProcessFile(dir, req.FileName)
 			if err != nil {
 				log.Printf("[webhook] process error in %s: %v", dir, err)
+				_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "error", err.Error())
 				continue
 			}
 			if result != nil {
 				log.Printf("[webhook] processed: %s -> %s (rule=%q)", result.SrcPath, result.DstPath, result.Rule.Name)
+				_ = service.RecordHistory(req.FileName, req.Event, result.Rule.Name, result.SrcPath, result.DstPath, "matched", "")
 				return c.JSON(http.StatusOK, map[string]string{
 					"status":    "ok",
 					"src_path":  result.SrcPath,
@@ -45,6 +48,7 @@ func Webhook(cfg *config.Config) echo.HandlerFunc {
 			}
 		}
 
+		_ = service.RecordHistory(req.FileName, req.Event, "", "", "", "no_match", "")
 		return c.JSON(http.StatusOK, map[string]string{
 			"status": "ok",
 		})

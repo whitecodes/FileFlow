@@ -26,5 +26,7 @@ func main() {
 	e.PUT("/api/rules/:id", handler.UpdateRule)
 	e.DELETE("/api/rules/:id", handler.DeleteRule)
 
+	e.GET("/api/history", handler.ListHistory)
+
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", cfg.Port)))
 }

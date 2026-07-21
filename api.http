@@ -1,8 +1,8 @@
 
-@url=192.168.123.203:8081
+@url=192.168.0.1:8080
 
 ### Webhook 回调 - 文件移动通知
-# 下载工具完成下载并移动到 HDD 后触发
+# 下载工具完成下载后触发
 POST http://{{url}}/api/webhook
 Content-Type: application/json
 
@@ -12,15 +12,29 @@ Content-Type: application/json
 }
 
 
-### 规则管理 - 创建规则
+### 规则管理 - 创建规则（基础通配符）
 POST http://{{url}}/api/rules
 Content-Type: application/json
 
 {
-  "name": "电影 - 所有 mp4 文件",
+  "name": "电影 - mp4 视频",
   "pattern": "*.mp4",
   "target_dir": "/data/media/movies",
   "rename_template": "{title}.{ext}",
+  "priority": 10,
+  "enabled": true
+}
+
+### 规则管理 - 创建规则（剧集自动序号）
+# 目标目录已有 S01, S02 时，{index} 自动计算为 03
+POST http://{{url}}/api/rules
+Content-Type: application/json
+
+{
+  "name": "剧集 - 瑞克和莫蒂 S09",
+  "pattern": "Rick.and.Morty.S09E*.1080p.x265-ELiTE.mkv",
+  "target_dir": "/mnt/ChaseShows/Rick.and.Morty.S09/",
+  "rename_template": "Rick.and.Morty.S09E{index}.1080p.x265-ELiTE.mkv",
   "priority": 10,
   "enabled": true
 }
@@ -47,11 +61,6 @@ Content-Type: application/json
 ### 规则管理 - 删除规则
 DELETE http://{{url}}/api/rules/1
 
-### 规则管理 - 切换规则启用状态
 
-PATCH http://{{url}}/api/rules/1/toggle
-Content-Type: application/json
-
-{
-  "enabled": false
-}
+### 历史记录 - 最近 100 条处理记录
+GET http://{{url}}/api/history
