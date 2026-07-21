@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FileFlow</title>
+<style>
+:root{--bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#e2e8f0;--text-dim:#94a3b8;--primary:#3b82f6;--primary-hover:#2563eb;--green:#22c55e;--red:#ef4444;--gray:#64748b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:56px;gap:32px}
+nav .brand{font-size:18px;font-weight:700;color:var(--primary)}
+nav a{color:var(--text-dim);text-decoration:none;font-size:14px;padding:4px 0;border-bottom:2px solid transparent;cursor:pointer}
+nav a:hover,nav a.active{color:var(--text);border-color:var(--primary)}
+.container{max-width:1200px;margin:0 auto;padding:24px}
+h1{font-size:24px;margin-bottom:20px}
+.btn{display:inline-block;padding:8px 16px;border:none;cursor:pointer;font-size:14px;transition:background .15s}
+.btn-primary{background:var(--primary);color:#fff}.btn-primary:hover{background:var(--primary-hover)}
+.btn-danger{background:var(--red);color:#fff}.btn-sm{padding:4px 10px;font-size:13px}
+table{width:100%;border-collapse:collapse;background:var(--surface)}
+th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);font-size:14px}
+th{color:var(--text-dim);font-weight:600;font-size:12px;text-transform:uppercase}
+tr:hover td{background:rgba(255,255,255,.03)}
+.badge{display:inline-block;padding:2px 8px;font-size:12px;font-weight:600}
+.badge-matched{background:rgba(34,197,94,.15);color:var(--green)}
+.badge-no_match{background:rgba(100,116,139,.15);color:var(--gray)}
+.badge-error{background:rgba(239,68,68,.15);color:var(--red)}
+.badge-received{background:rgba(59,130,246,.15);color:var(--primary)}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);justify-content:center;align-items:center;z-index:100}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);padding:24px;width:90%;max-width:520px;border:1px solid var(--border)}
+.modal h2{margin-bottom:16px;font-size:18px}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:13px;color:var(--text-dim);margin-bottom:4px}
+.form-group .hint{font-size:11px;color:var(--gray);margin-top:2px}
+.form-group input{width:100%;padding:8px 12px;background:var(--bg);border:1px solid var(--border);color:var(--text);font-size:14px}
+.form-group input:focus{outline:0;border-color:var(--primary)}
+.form-row{display:flex;gap:12px}.form-row .form-group{flex:1}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+.checkbox-group{display:flex;align-items:center;gap:8px}.checkbox-group input[type=checkbox]{width:auto}
+.empty-state{text-align:center;padding:48px;color:var(--text-dim)}
+.empty-state p{margin-top:8px;font-size:14px}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;color:#fff;font-size:14px;opacity:0;transition:opacity .3s;z-index:200}
+.toast.show{opacity:1}.toast-success{background:var(--green)}.toast-error{background:var(--red)}
+code{font-size:13px;color:var(--primary)}td code{font-size:12px}
+</style>
+</head>
+<body>
+<nav>
+  <span class="brand">FileFlow</span>
+  <a class="active" id="nav-rules" onclick="switchTab('rules')">规则管理</a>
+  <a id="nav-history" onclick="switchTab('history')">执行记录</a>
+</nav>
+<div class="container" id="app"></div>
+<div id="toast" class="toast"></div>
+
+<!-- 创建规则弹窗 -->
+<div id="create-modal" class="modal-overlay">
+  <div class="modal">
+    <h2>创建规则</h2>
+    <form id="create-form">
+      <div class="form-group"><label>规则名称</label><input name="name" required placeholder="电影 - mp4"></div>
+      <div class="form-group"><label>匹配模式</label><input name="pattern" required placeholder="*.mp4"></div>
+      <div class="form-group"><label>目标目录</label><input name="target_dir" required placeholder="/data/media/movies"></div>
+      <div class="form-group"><label>命名模板</label><input name="rename_template" placeholder="{title}.{ext}" value="{title}.{ext}"></div>
+      <div class="form-row">
+        <div class="form-group"><label>优先级（越大越优先）</label><input name="priority" type="number" value="10"></div>
+        <div class="form-group"><label>&nbsp;</label><div class="checkbox-group"><input name="enabled" type="checkbox" checked><label style="margin:0">启用</label></div></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="modal('create-modal')">取消</button>
+        <button type="submit" class="btn btn-primary">创建</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 编辑规则弹窗 -->
+<div id="edit-modal" class="modal-overlay">
+  <div class="modal">
+    <h2>编辑规则</h2>
+    <form id="edit-form">
+      <input name="id" type="hidden">
+      <div class="form-group"><label>规则名称</label><input name="name" required></div>
+      <div class="form-group"><label>匹配模式</label><input name="pattern" required></div>
+      <div class="form-group"><label>目标目录</label><input name="target_dir" required></div>
+      <div class="form-group"><label>命名模板</label><input name="rename_template" value="{title}.{ext}"></div>
+      <div class="form-row">
+        <div class="form-group"><label>优先级（越大越优先）</label><input name="priority" type="number"></div>
+        <div class="form-group"><label>&nbsp;</label><div class="checkbox-group"><input name="enabled" type="checkbox" checked><label style="margin:0">启用</label></div></div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn" onclick="modal('edit-modal')">取消</button>
+        <button type="submit" class="btn btn-primary">保存</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const API = '/api'
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } }
+  if (body) opts.body = JSON.stringify(body)
+  const res = await fetch(API + path, opts)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(err.error || res.status)
+  }
+  return res.json()
+}
+
+function toast(msg, type) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.className = 'toast toast-' + type + ' show'
+  setTimeout(() => el.classList.remove('show'), 3000)
+}
+
+function modal(id) {
+  document.getElementById(id).classList.toggle('open')
+}
+
+let currentTab = 'rules'
+
+function switchTab(tab) {
+  currentTab = tab
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'))
+  document.getElementById('nav-' + tab).classList.add('active')
+  render()
+}
+
+async function render() {
+  const app = document.getElementById('app')
+  try {
+    if (currentTab === 'rules') {
+      const rules = await api('GET', '/rules')
+      app.innerHTML = renderRules(rules)
+    } else {
+      const records = await api('GET', '/history')
+      app.innerHTML = renderHistory(records)
+    }
+  } catch (e) {
+    app.innerHTML = '<div class="empty-state"><p>加载失败: ' + e.message + '</p></div>'
+  }
+}
+
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+function pad(n) { return n < 10 ? '0' + n : String(n) }
+
+// --- Rules ---
+function renderRules(rules) {
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+  html += '<h1 style="margin:0">规则管理</h1>'
+  html += '<button class="btn btn-primary" onclick="showCreate()">+ 创建</button></div>'
+
+  if (!rules.length) {
+    return html + '<div class="empty-state"><div style="font-size:40px">📋</div><p>还没有创建规则</p></div>'
+  }
+
+  html += '<table><thead><tr><th>名称</th><th>匹配模式</th><th>目标目录</th><th>命名模板</th><th>优先级</th><th>状态</th><th>操作</th></tr></thead><tbody>'
+  for (const r of rules) {
+    const st = r.enabled ? 'matched' : 'no_match'
+    const sl = r.enabled ? '启用' : '禁用'
+    html += '<tr>'
+    html += '<td>' + esc(r.name) + '</td>'
+    html += '<td><code>' + esc(r.pattern) + '</code></td>'
+    html += '<td><code>' + esc(r.target_dir) + '</code></td>'
+    html += '<td><code>' + esc(r.rename_template) + '</code></td>'
+    html += '<td>' + r.priority + '</td>'
+    html += '<td><span class="badge badge-' + st + '">' + sl + '</span></td>'
+    html += '<td>'
+    html += '<button class="btn btn-sm btn-primary" onclick="showEdit(' + r.id + ')">编辑</button> '
+    html += '<button class="btn btn-sm btn-danger" onclick="doDelete(' + r.id + ')">删除</button>'
+    html += '</td></tr>'
+  }
+  html += '</tbody></table>'
+  return html
+}
+
+function showCreate() {
+  document.getElementById('create-form').reset()
+  document.getElementById('create-form').querySelector('[name=enabled]').checked = true
+  modal('create-modal')
+}
+
+document.getElementById('create-form').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const fd = new FormData(e.target)
+  const data = {
+    name: fd.get('name'), pattern: fd.get('pattern'), target_dir: fd.get('target_dir'),
+    rename_template: fd.get('rename_template') || '{title}.{ext}',
+    priority: parseInt(fd.get('priority')) || 0,
+    enabled: fd.get('enabled') === 'on'
+  }
+  try {
+    await api('POST', '/rules', data)
+    toast('规则创建成功', 'success')
+    modal('create-modal')
+    render()
+  } catch (e) { toast('创建失败: ' + e.message, 'error') }
+})
+
+async function showEdit(id) {
+  try {
+    const rule = await api('GET', '/rules/' + id)
+    const form = document.getElementById('edit-form')
+    form.querySelector('[name=id]').value = rule.id
+    form.querySelector('[name=name]').value = rule.name
+    form.querySelector('[name=pattern]').value = rule.pattern
+    form.querySelector('[name=target_dir]').value = rule.target_dir
+    form.querySelector('[name=rename_template]').value = rule.rename_template
+    form.querySelector('[name=priority]').value = rule.priority
+    form.querySelector('[name=enabled]').checked = rule.enabled
+    modal('edit-modal')
+  } catch (e) { toast('获取规则失败: ' + e.message, 'error') }
+}
+
+document.getElementById('edit-form').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const fd = new FormData(e.target)
+  const data = {
+    name: fd.get('name'), pattern: fd.get('pattern'), target_dir: fd.get('target_dir'),
+    rename_template: fd.get('rename_template') || '{title}.{ext}',
+    priority: parseInt(fd.get('priority')) || 0,
+    enabled: fd.get('enabled') === 'on'
+  }
+  try {
+    await api('PUT', '/rules/' + fd.get('id'), data)
+    toast('规则更新成功', 'success')
+    modal('edit-modal')
+    render()
+  } catch (e) { toast('更新失败: ' + e.message, 'error') }
+})
+
+async function doDelete(id) {
+  if (!confirm('确定删除这条规则？')) return
+  try {
+    await api('DELETE', '/rules/' + id)
+    toast('规则已删除', 'success')
+    render()
+  } catch (e) { toast('删除失败: ' + e.message, 'error') }
+}
+
+// --- History ---
+function renderHistory(records) {
+  let html = '<h1>执行记录</h1>'
+  if (!records.length) {
+    return html + '<div class="empty-state"><div style="font-size:40px">📭</div><p>还没有执行记录</p></div>'
+  }
+  html += '<table><thead><tr><th>时间</th><th>文件名</th><th>状态</th><th>匹配规则</th><th>源路径</th><th>目标路径</th></tr></thead><tbody>'
+  for (const r of records) {
+    const t = new Date(r.created_at)
+    const ts = pad(t.getMonth()+1)+'-'+pad(t.getDate())+' '+pad(t.getHours())+':'+pad(t.getMinutes())+':'+pad(t.getSeconds())
+    html += '<tr>'
+    html += '<td style="white-space:nowrap;color:var(--text-dim)">' + ts + '</td>'
+    html += '<td>' + esc(r.file_name) + '</td>'
+    html += '<td><span class="badge badge-' + r.status + '">' + r.status + '</span></td>'
+    html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">' + esc(r.rule_name) + '</td>'
+    html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><code>' + esc(r.src_path) + '</code></td>'
+    html += '<td style="max-width:200px;overflow:hidden;text-overflow:ellipsis"><code>' + esc(r.dst_path) + '</code></td>'
+    html += '</tr>'
+  }
+  html += '</tbody></table>'
+  return html
+}
+
+render()
+</script>
+</body>
+</html>

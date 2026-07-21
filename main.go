@@ -18,6 +18,10 @@ func main() {
 
 	e := echo.New()
 
+	handler.RegisterStatic(e)
+
+	e.GET("/api/history", handler.ListHistory)
+
 	e.POST("/api/webhook", handler.Webhook(cfg))
 
 	e.GET("/api/rules", handler.ListRules)
@@ -25,8 +29,6 @@ func main() {
 	e.GET("/api/rules/:id", handler.GetRule)
 	e.PUT("/api/rules/:id", handler.UpdateRule)
 	e.DELETE("/api/rules/:id", handler.DeleteRule)
-
-	e.GET("/api/history", handler.ListHistory)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", cfg.Port)))
 }
