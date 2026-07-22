@@ -64,7 +64,7 @@ rules:
   - name: "瑞克和莫蒂 S09"
     pattern: "Rick.and.Morty.S09E*.1080p.x265-ELiTE.mkv"
     target_dir: "/mnt/ChaseShows/Rick.and.Morty.S09"
-    target_name: "Rick.and.Morty.S09E{source.1}.1080p.x265-ELiTE.mkv"
+    target_name: "{source.0}"
 ```
 
 匹配过程：
@@ -73,26 +73,12 @@ rules:
 源文件: Rick.and.Morty.S09E09.1080p.x265-ELiTE.mkv
 pattern:              *
          Rick.and.Morty.S09E09.1080p.x265-ELiTE.mkv
-         ↓ source.1 = "09"
+         ↓ source.0 = "Rick.and.Morty.S09E09.1080p.x265-ELiTE.mkv"
 目标: /mnt/ChaseShows/Rick.and.Morty.S09/Rick.and.Morty.S09E09.1080p.x265-ELiTE.mkv
 ```
 
-**场景二：电影分类（按扩展名筛选）**
 
-```yaml
-rules:
-  - name: "电影 - mp4"
-    pattern: "*.mp4"
-    target_dir: "/data/media/movies"
-    target_name: "{source.0}"
-
-  - name: "电影 - mkv"
-    pattern: "*.mkv"
-    target_dir: "/data/media/movies"
-    target_name: "{source.0}"
-```
-
-**场景三：使用目标目录序号**
+**场景二：使用目标目录序号**
 
 ```yaml
 rules:
