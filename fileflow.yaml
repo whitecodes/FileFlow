@@ -1,0 +1,5 @@
+rules:
+  - name: "瑞克和莫蒂 S09"
+    pattern: "Rick.and.Morty.S09E*.1080p.x265-ELiTE.mkv"
+    target_dir: "/mnt/ChaseShows/Rick.and.Morty.S09"
+    target_name: "Rick.and.Morty.S09E{source.1}.1080p.x265-ELiTE.mkv"
